@@ -1,0 +1,38 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.sample
+!**/.env.template
+backend/models/
+# Local vector DBs are machine-specific, regenerable, and may contain customer data.
+backend/kb_index/
+backend/rag_index/
+# Rotating runtime logs.
+backend/logs/
+# Cached MCP OAuth tokens are credentials; never commit them.
+**/.oauth_tokens/
+
+# Credentials and private key material
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*credentials*.json
+*secrets*.json
+*tokens*.json
+
+# Node / Tauri
+frontend/node_modules/
+frontend/dist/
+frontend/src-tauri/target/
+frontend/src-tauri/icons/
+
+# OS
+.DS_Store
+Thumbs.db

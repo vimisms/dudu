@@ -1,0 +1,37 @@
+# --- Web / WebSocket server ---
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.19
+websockets==13.1
+pydantic==2.10.3
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+
+# --- Agent orchestration ---
+langgraph==0.2.60
+langchain-core==0.3.36   # bumped from 0.3.28: langchain-mcp-adapters 0.0.5 requires >=0.3.36
+langchain-openai==0.2.14
+# Swap for langchain-anthropic if you want Claude as the agent LLM instead of GPT:
+# langchain-anthropic==0.3.1
+
+# --- MCP client (Filesystem MCP + Zomato MCP) + our own kb_search_server ---
+mcp>=1.9.2,<2
+langchain-mcp-adapters==0.1.7   # bumped from 0.0.5: code uses the newer async client API (await get_tools) + streamable_http transport, only in >=0.1.0
+
+# --- Local RAG (rag_search_server.py): local vector DB semantic search ---
+sentence-transformers==3.3.1   # local embedding model, no cloud API calls
+chromadb==0.5.23                # persistent local vector DB, no server process
+scikit-learn==1.5.2              # only used for the zero-download TF-IDF fallback backend
+
+# --- Voice pipeline ---
+openwakeword==0.6.0
+faster-whisper==1.1.0          # CTranslate2-based Whisper, much faster than openai-whisper on CPU
+piper-tts==1.3.0               # bumped from 1.2.0: 1.2.0's piper-phonemize dep has no Windows/py3.12 wheels; 1.3.0 ships a win_amd64 wheel
+sounddevice==0.5.1
+numpy==1.26.4
+soundfile==0.12.1
+webrtcvad==2.0.10              # voice-activity detection to know when the user stopped talking
+
+# --- Utilities ---
+loguru==0.7.3
+setuptools<80             # provides pkg_resources, imported by webrtcvad; setuptools>=81 removed it, and 3.12+ venvs don't bundle it

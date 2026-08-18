@@ -1,0 +1,100 @@
+{
+  "filesystem": {
+    "_comment": "Official MCP filesystem server, scoped to the KB repo. Requires Node.js on PATH. Gives read_file/list_directory/etc, but search_files here only matches FILE NAMES, not content -- see kb_search. IF THIS TIMES OUT: npx is resolving the package over the network on every start. Fix it permanently with `npm i -g @modelcontextprotocol/server-filesystem`, after which --prefer-offline resolves from the local cache in milliseconds. Losing this server means the agent cannot read any file, so it is worth fixing rather than ignoring.",
+    "command": "npx",
+    "args": [
+      "-y",
+      "--prefer-offline",
+      "@modelcontextprotocol/server-filesystem",
+      "${KB_REPO_PATH}"
+    ],
+    "transport": "stdio"
+  },
+  "kb_search": {
+    "_comment": "Custom in-repo MCP server (kb_search_server.py). Adds full-text content search + a fast ICM/doc index -- the official filesystem server can't search inside file contents.",
+    "command": "python",
+    "args": ["kb_search_server.py"],
+    "transport": "stdio",
+    "env": {
+      "KB_REPO_PATH": "${KB_REPO_PATH}"
+    }
+  },
+  "kb_rag_search": {
+    "_comment": "Custom in-repo MCP server (rag_search_server.py). Local vector-DB semantic search (meaning-based, not keyword-based) -- the tool for triage-style questions like 'what should I do when X is stuck'. Runs a background thread that re-syncs the index every KB_REINDEX_INTERVAL_SECONDS so edits made to the repo during the day stay searchable without a manual step.",
+    "command": "python",
+    "args": ["rag_search_server.py"],
+    "transport": "stdio",
+    "env": {
+      "KB_REPO_PATH": "${KB_REPO_PATH}",
+      "KB_INDEX_DIR": "${KB_INDEX_DIR}",
+      "KB_EMBEDDING_BACKEND": "${KB_EMBEDDING_BACKEND}",
+      "KB_VECTOR_BACKEND": "${KB_VECTOR_BACKEND}",
+      "KB_EMBEDDING_MODEL": "${KB_EMBEDDING_MODEL}",
+      "KB_REINDEX_INTERVAL_SECONDS": "${KB_REINDEX_INTERVAL_SECONDS}"
+    }
+  },
+  "my-icm-mcp-server-c03f0519": {
+    "_comment": "Remote ICM MCP server. Same URL as your .vscode/mcp.json, which carries NO key -- meaning the server authenticates via the MCP OAuth flow, which is exactly why Copilot prompts you to sign in. \"auth\": \"oauth\" makes DuDu run that same flow: first connection opens a browser for consent, then the token is cached in backend/.oauth_tokens/ and refreshed silently. transport=streamable_http here rather than VS Code's type:http -- different client, same protocol.",
+    "url": "https://icm-mcp-prod.azure-api.net/v1/",
+    "transport": "streamable_http",
+    "auth": "oauth",
+    "oauth_client_id": "${ICM_OAUTH_CLIENT_ID}",
+    "oauth_client_secret": "${ICM_OAUTH_CLIENT_SECRET}"
+  },
+  "quickcommerce": {
+    "_comment": "Local wrapper (quickcommerce_server.py) around the QuickCommerce REST API. Same 7 tools as the hosted MCP -- search_products, get_item_details, check_delivery_eta, group_search, group_eta, check_credits, list_platforms -- but reliable with langchain-mcp-adapters (the hosted /mcp streamable-http endpoint fails the session handshake). Auth via QUICKCOMMERCE_API_KEY (X-API-Key). Skipped unless the key is set in .env.",
+    "command": "python",
+    "args": ["quickcommerce_server.py"],
+    "transport": "stdio",
+    "env": {
+      "QUICKCOMMERCE_API_KEY": "${QUICKCOMMERCE_API_KEY}"
+    }
+  },
+  "serpapi": {
+    "_comment": "Local wrapper (serpapi_server.py) around SerpAPI for real Google search: google_search (web), google_local (doctors/restaurants/places), google_shopping (products/prices). Auth via SERPAPI_API_KEY. Skipped unless the key is set in .env.",
+    "command": "python",
+    "args": ["serpapi_server.py"],
+    "transport": "stdio",
+    "env": {
+      "SERPAPI_API_KEY": "${SERPAPI_API_KEY}"
+    }
+  },
+  "twilio": {
+    "_comment": "Official Twilio MCP (@twilio-alpha/mcp) over stdio, narrowed to SMS ONLY. Twilio's MCP exposes ~197 tools by default, which is sent to the model on every request -- so it is filtered twice: --services/--tags limit what the SERVER generates (twilio_api_v2010 = the classic REST API, Api20100401Message = the Messages resource used to send SMS), and \"only_tools\" is a belt-and-braces allowlist on our side. Auth arg is ACCOUNT_SID/API_KEY:API_SECRET. Skipped unless all three are set in .env. Watch the startup log: it prints every tool the server offered, so you can tighten \"only_tools\" to the exact generated name.",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@twilio-alpha/mcp",
+      "${TWILIO_MCP_AUTH}",
+      "--services",
+      "twilio_api_v2010",
+      "--tags",
+      "Api20100401Message"
+    ],
+    "transport": "stdio",
+    "only_tools": ["*Message*", "*message*"]
+  },
+  "swiggy_food": {
+    "_comment": "Swiggy Builders Club -- official India MCP. OAuth 2.1 + PKCE with Dynamic Client Registration, which is exactly what mcp_oauth.py performs, so no client ID to apply for: the first connection registers this app and opens a browser for consent. Local/dev use needs no approval; production access requires applying at mcp.swiggy.com/builders/docs/operate/access with a demo video. Other servers: /im (Instamart, 13 tools) and /dineout (reservations, 8 tools) -- add them the same way once food works. Skipped unless ENABLE_SWIGGY=true.",
+    "url": "https://mcp.swiggy.com/food",
+    "transport": "streamable_http",
+    "auth": "oauth",
+    "only_tools": [
+      "get_addresses",
+      "*search*",
+      "*restaurant*",
+      "*menu*",
+      "*cart*",
+      "*order*",
+      "*track*"
+    ]
+  },
+  "zomato": {
+    "_comment": "External remote MCP server for menu search / cart / QR checkout. URL and auth scheme should be confirmed against Zomato's own MCP docs before relying on this in production.",
+    "url": "${ZOMATO_MCP_URL}",
+    "transport": "streamable_http",
+    "headers": {
+      "Authorization": "Bearer ${ZOMATO_MCP_API_KEY}"
+    }
+  }
+}
